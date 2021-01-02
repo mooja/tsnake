@@ -34,6 +34,7 @@ pub struct Game {
     snake: snake::Snake,
     dot: snake::Position,
     state: GameState,
+    grid_size: u8
     // grid: Grid,
 }
 
@@ -42,6 +43,7 @@ impl Game {
         let snake = snake::Snake::new();
         let dot = snake::Position { x: 5, y: 5 };
         let state = GameState::Active;
+        let grid_size = 20;
 
         Game {
             event_channel,
@@ -49,6 +51,7 @@ impl Game {
             snake,
             dot,
             state,
+            grid_size
         }
 
     }
@@ -111,22 +114,57 @@ impl Game {
                 termion::cursor::Hide
             ).unwrap();
         }
+        self.draw_box();
         self.stdout.flush().unwrap();
     }
 
-    fn snake_on_dot(&self) -> bool {
-        self.snake.get_positions().iter().any(|p| *p == self.dot)
-    }
-
-    fn snake_oob(&self) -> bool {
+    fn draw_box(&mut self) {
         let (width, height) = termion::terminal_size().unwrap();
         let x_offset = (width / 2) as i32;
         let y_offset = (height / 2) as i32;
+        let radius = (self.grid_size / 2) as i32;
+
+        for x in (-radius-1)..radius+1 {
+            let ys = [-radius-1, radius+1];
+            for y in ys.iter() {
+                write!(self.stdout, "{}-{}",
+                    termion::cursor::Goto((x_offset + x) as u16, (y_offset - y) as u16),
+                    termion::cursor::Hide
+                ).unwrap();
+            }
+        }
+
+        for y in (-radius-1)..radius+1 {
+            let xs = [-radius-1, radius+1];
+            for x in xs.iter() {
+                write!(self.stdout, "{}|{}",
+                    termion::cursor::Goto((x_offset + x) as u16, (y_offset - y) as u16),
+                    termion::cursor::Hide
+                ).unwrap();
+            }
+        }
+
+        for x in [-radius-1, radius+1].iter() {
+            for y in [-radius-1, radius+1].iter() {
+                write!(self.stdout, "{}+{}",
+                    termion::cursor::Goto((x_offset + x) as u16, (y_offset - y) as u16),
+                    termion::cursor::Hide
+                ).unwrap();
+            }
+        }
+    }
+
+    fn snake_on_dot(&self) -> bool {
+        self.snake.get_positions().iter().any(|&p| p == self.dot)
+    }
+
+    fn snake_oob(&self) -> bool {
+        let radius = (self.grid_size / 2) as i32;
         let head = &self.snake.get_head_position();
-        return head.x <= -x_offset 
-               || head.x >= x_offset
-               || head.y <= -y_offset 
-               || head.y >= y_offset
+        return head.x < -radius
+               || head.x > radius
+               || head.y < -radius
+               || head.y > radius
     }
 
     fn snake_in_itself(&self) -> bool {
@@ -136,14 +174,12 @@ impl Game {
     }
 
     fn make_new_dot(&mut self) {
+        let radius = (self.grid_size / 2) as i32;
         let mut rng = rand::thread_rng();
-        let (width, height) = termion::terminal_size().unwrap();
-        let x_offset = (width / 2) as i32;
-        let y_offset = (height / 2) as i32;
         self.dot = loop {
             let rand_pos = snake::Position {
-                x: rng.gen_range(-x_offset, x_offset),
-                y: rng.gen_range(-y_offset, y_offset)
+                x: rng.gen_range(-radius, radius),
+                y: rng.gen_range(-radius, radius)
             };
 
             if !self.snake.get_positions().contains(&rand_pos) {
