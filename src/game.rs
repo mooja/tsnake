@@ -1,18 +1,15 @@
 use crate::snake;
 
 use rand::Rng;
-use std::thread::sleep;
-use std::time::Duration;
+use std::io;
+use std::io::Write;
 use std::sync::mpsc;
 use termion;
-use std::io;
-use std::io::{Write, stdout, stdin};
-
 
 #[derive(Debug)]
 pub enum GameEvent {
     Tick,
-    KeyPress(termion::event::Key)
+    KeyPress(termion::event::Key),
 }
 
 #[derive(Debug)]
@@ -27,19 +24,20 @@ pub struct Grid {
     height: i32,
 }
 
-
 pub struct Game {
     event_channel: mpsc::Receiver<GameEvent>,
     stdout: termion::raw::RawTerminal<io::Stdout>,
     snake: snake::Snake,
     dot: snake::Position,
     state: GameState,
-    grid_size: u8
-    // grid: Grid,
+    grid_size: u8, // grid: Grid,
 }
 
 impl Game {
-    pub fn new(event_channel: mpsc::Receiver<GameEvent>, stdout: termion::raw::RawTerminal<io::Stdout>) -> Self {
+    pub fn new(
+        event_channel: mpsc::Receiver<GameEvent>,
+        stdout: termion::raw::RawTerminal<io::Stdout>,
+    ) -> Self {
         let snake = snake::Snake::new();
         let dot = snake::Position { x: 5, y: 5 };
         let state = GameState::Active;
@@ -51,9 +49,8 @@ impl Game {
             snake,
             dot,
             state,
-            grid_size
+            grid_size,
         }
-
     }
 
     pub fn run(&mut self) {
@@ -61,24 +58,36 @@ impl Game {
             let event = self.event_channel.recv().unwrap();
             match event {
                 GameEvent::KeyPress(termion::event::Key::Char('q')) => {
-                    write!(self.stdout, "{}{}", termion::clear::All, termion::cursor::Show).unwrap();
+                    write!(
+                        self.stdout,
+                        "{}{}",
+                        termion::clear::All,
+                        termion::cursor::Show
+                    )
+                    .unwrap();
                     break;
                 }
 
-                GameEvent::KeyPress(termion::event::Key::Char(c)) => {
-                    match c {
-                        'w' | 'k' => self.snake.change_head_direction(snake::Direction::North),
-                        's' | 'j' => self.snake.change_head_direction(snake::Direction::South),
-                        'a' | 'h' => self.snake.change_head_direction(snake::Direction::West),
-                        'd' | 'l' => self.snake.change_head_direction(snake::Direction::East),
-                        _ => ()
-                    }
-                }
+                GameEvent::KeyPress(termion::event::Key::Char(c)) => match c {
+                    'w' | 'k' => self.snake.change_head_direction(snake::Direction::North),
+                    's' | 'j' => self.snake.change_head_direction(snake::Direction::South),
+                    'a' | 'h' => self.snake.change_head_direction(snake::Direction::West),
+                    'd' | 'l' => self.snake.change_head_direction(snake::Direction::East),
+                    _ => (),
+                },
 
-                GameEvent::KeyPress(termion::event::Key::Up) => self.snake.change_head_direction(snake::Direction::North),
-                GameEvent::KeyPress(termion::event::Key::Left) => self.snake.change_head_direction(snake::Direction::West),
-                GameEvent::KeyPress(termion::event::Key::Right) => self.snake.change_head_direction(snake::Direction::East),
-                GameEvent::KeyPress(termion::event::Key::Down) => self.snake.change_head_direction(snake::Direction::South),
+                GameEvent::KeyPress(termion::event::Key::Up) => {
+                    self.snake.change_head_direction(snake::Direction::North)
+                }
+                GameEvent::KeyPress(termion::event::Key::Left) => {
+                    self.snake.change_head_direction(snake::Direction::West)
+                }
+                GameEvent::KeyPress(termion::event::Key::Right) => {
+                    self.snake.change_head_direction(snake::Direction::East)
+                }
+                GameEvent::KeyPress(termion::event::Key::Down) => {
+                    self.snake.change_head_direction(snake::Direction::South)
+                }
 
                 GameEvent::Tick => {
                     self.snake.advance();
@@ -92,7 +101,7 @@ impl Game {
                     }
                 }
 
-                _ => ()
+                _ => (),
             }
 
             self.draw();
@@ -109,10 +118,13 @@ impl Game {
 
         write!(self.stdout, "{}", termion::clear::All).unwrap();
         for p in positions {
-            write!(self.stdout, "{}#{}",
+            write!(
+                self.stdout,
+                "{}#{}",
                 termion::cursor::Goto((x_offset + p.x) as u16, (y_offset - p.y) as u16),
                 termion::cursor::Hide
-            ).unwrap();
+            )
+            .unwrap();
         }
         self.draw_box();
         self.stdout.flush().unwrap();
@@ -124,32 +136,41 @@ impl Game {
         let y_offset = (height / 2) as i32;
         let radius = (self.grid_size / 2) as i32;
 
-        for x in (-radius-1)..radius+1 {
-            let ys = [-radius-1, radius+1];
+        for x in (-radius - 1)..radius + 1 {
+            let ys = [-radius - 1, radius + 1];
             for y in ys.iter() {
-                write!(self.stdout, "{}-{}",
+                write!(
+                    self.stdout,
+                    "{}-{}",
                     termion::cursor::Goto((x_offset + x) as u16, (y_offset - y) as u16),
                     termion::cursor::Hide
-                ).unwrap();
+                )
+                .unwrap();
             }
         }
 
-        for y in (-radius-1)..radius+1 {
-            let xs = [-radius-1, radius+1];
+        for y in (-radius - 1)..radius + 1 {
+            let xs = [-radius - 1, radius + 1];
             for x in xs.iter() {
-                write!(self.stdout, "{}|{}",
+                write!(
+                    self.stdout,
+                    "{}|{}",
                     termion::cursor::Goto((x_offset + x) as u16, (y_offset - y) as u16),
                     termion::cursor::Hide
-                ).unwrap();
+                )
+                .unwrap();
             }
         }
 
-        for x in [-radius-1, radius+1].iter() {
-            for y in [-radius-1, radius+1].iter() {
-                write!(self.stdout, "{}+{}",
+        for x in [-radius - 1, radius + 1].iter() {
+            for y in [-radius - 1, radius + 1].iter() {
+                write!(
+                    self.stdout,
+                    "{}+{}",
                     termion::cursor::Goto((x_offset + x) as u16, (y_offset - y) as u16),
                     termion::cursor::Hide
-                ).unwrap();
+                )
+                .unwrap();
             }
         }
     }
@@ -161,10 +182,7 @@ impl Game {
     fn snake_oob(&self) -> bool {
         let radius = (self.grid_size / 2) as i32;
         let head = &self.snake.get_head_position();
-        return head.x < -radius
-               || head.x > radius
-               || head.y < -radius
-               || head.y > radius
+        return head.x < -radius || head.x > radius || head.y < -radius || head.y > radius;
     }
 
     fn snake_in_itself(&self) -> bool {
@@ -179,7 +197,7 @@ impl Game {
         self.dot = loop {
             let rand_pos = snake::Position {
                 x: rng.gen_range(-radius, radius),
-                y: rng.gen_range(-radius, radius)
+                y: rng.gen_range(-radius, radius),
             };
 
             if !self.snake.get_positions().contains(&rand_pos) {
